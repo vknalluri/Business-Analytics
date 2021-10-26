@@ -1,0 +1,350 @@
+---
+title: "Vamsi Nalluri"
+output:
+  word_document: default
+  html_document: default
+---
+
+***
+Loading the Data Set & the required libraries and diplaying the summary stats and the top 6 rows of the data using head function.
+
+***
+```{r}
+#install.packages("dplyr)
+library(dplyr)
+#install.packages("ggplot2")
+library(ggplot2)
+
+# clean the workspace
+rm(list = ls())
+
+Mydata = read.csv('Online_Retail.csv')
+
+head(Mydata)
+summary(Mydata)
+
+
+```
+
+***
+
+1.Show the breakdown of the number of transactions by countries i.e. how many transactions are in the dataset for each country (consider all records including cancelled transactions). Show this in total number and also in percentage. Show only countries accounting for more than 1% of the total transactions
+
+***
+
+We will use group_by, summarise , mutate and filter functions to out put the desired result
+
+***
+```{r}
+
+Mydata %>% group_by(Country) %>% summarise(n=n()) %>% mutate(per = 100* n/sum(n)) %>% filter(per>1)
+
+```
+
+***
+2.Create a new variable ‘TransactionValue’ that is the product of the exising ‘Quantity’ and ‘UnitPrice’ variables. Add this variable to the dataframe. 
+
+***
+We will use mutate function from dplyr package to add another column to the dataframe Mydata and (display the dataframe)
+
+***
+```{r}
+
+Mydata <- Mydata %>% mutate(TransactionValue = (Quantity * UnitPrice))
+
+#Mydata
+
+```
+
+***
+
+3.Using the newly created variable, TransactionValue, show the breakdown of transaction values by countries i.e. how much money in total has been spent each country. Show this in total sum of transaction values. Show only countries with total transaction exceeding 130,000 British Pound. 
+
+***
+
+Using group_by, summarise and filter functions to display the countries that have a total transaction value of over 130000
+
+***
+
+```{r}
+
+Mydata %>% group_by(Country) %>% summarise(TV = sum(TransactionValue)) %>% ungroup %>% filter(TV>130000) 
+
+
+```
+
+***
+
+4. Bonus Point Questions:
+
+a).Show the percentage of transactions (by numbers) by days of the week
+
+***
+
+Percent of Transactions (numbers) by Day of the week in Per column
+
+***
+
+
+```{r}
+
+Temp=strptime(Mydata$InvoiceDate,format='%m/%d/%Y %H:%M',tz='GMT')
+
+Mydata$New_Invoice_Date <- as.Date(Temp)
+
+Mydata$Invoice_Day_Week= weekdays(Mydata$New_Invoice_Date)
+
+Mydata$New_Invoice_Hour = as.numeric(format(Temp, "%H"))
+
+Mydata$New_Invoice_Month = as.numeric(format(Temp, "%m"))
+
+
+Mydata %>% count(Invoice_Day_Week , sort = TRUE) %>% mutate(per = 100* n/sum(n))
+            
+
+
+```
+
+***
+
+b).Show the percentage of transactions (by transaction volume) by days of the week
+
+***
+
+Percent of Transactions (volume) by Day of the week in Per column
+
+We first get the total(count) of transaction values by week day into Mydata_TV_DW_Per dataframe
+Then we get the total transaction values by by week day into Mydata_TV_DW_Per1 for each month
+Lastly, we append the percentage (per) column to Mydata_TV_DW_Per1
+
+***
+
+```{r}
+
+Mydata_TV_DW_Per <- Mydata %>% count(Invoice_Day_Week) %>% summarise(TVDW = sum(Mydata$TransactionValue)) 
+
+Mydata_TV_DW_Per2 <- Mydata %>% group_by(Invoice_Day_Week) %>% summarise(TVDW1 = sum(TransactionValue))
+
+Mydata_TV_DW_Per2 %>% mutate(per = 100* Mydata_TV_DW_Per2$TVDW1/(Mydata_TV_DW_Per[1,1]))
+
+
+```
+
+***
+
+c).Show the percentage of transactions (by transaction volume) by month of the year
+
+***
+
+Percent of Transactions (volume) by month of the year
+
+We first get the total(count) of transaction values by month into Mydata_TV_M_Per dataframe
+Then we get the total transaction values by by month into Mydata_TV_M_Per1 for each month
+Lastly, we append the percentage (per) column to Mydata_TV_M_Per1
+
+***
+
+```{r}
+
+Mydata_TV_M_Per <- Mydata %>% count(New_Invoice_Month) %>% summarise(TVM = sum(Mydata$TransactionValue)) 
+
+Mydata_TV_M_Per1 <- Mydata %>% group_by(New_Invoice_Month) %>% summarise(TVM1 = sum(TransactionValue))
+
+Mydata_TV_M_Per1 %>% mutate(per = 100* Mydata_TV_M_Per1$TVM1/(Mydata_TV_M_Per[1,1]))
+
+
+
+```
+
+***
+
+d).What was the date with the highest number of transactions from Australia
+
+***
+
+We will group by and count the values , string the result in Mydata4 and then apply filter
+
+***
+
+```{r}
+
+Mydata4 <- Mydata %>% group_by(Country) %>% count(Mydata$country,Mydata$New_Invoice_Date)
+
+Mydata5 <- filter(Mydata4 , Country == "Australia" & n == max(n)) 
+
+Mydata5
+
+```
+
+***
+
+e).The company needs to shut down the website for two consecutive hours for maintenance.What would be the hour of the day to start this so that the distribution is at minimum for the customers? The responsible IT team is available from 7:00 to 20:00 every day
+
+***
+
+A cursory look at the result shows that it would be idle to go for the maintenance during 19 to 20 hours as the cumulative value of transcations are less during that time (though its much lesser during 6 to 7, we cant for that window as IT team would not be available at 6)
+
+***
+
+```{r}
+
+Mydata6 <- Mydata %>% group_by(New_Invoice_Hour) %>% count(Mydata$New_Invoice_Hour , sort = TRUE)
+
+Mydata6
+
+```
+
+***
+
+5.Plot the histogram of transaction values from Germany. Use the hist() function to plot.
+
+***
+
+```{r}
+
+Mydata7 <- Mydata %>% summarise(Country,TransactionValue)
+
+Mydata8 <- filter(Mydata7 , Country == "Germany") 
+
+hist(Mydata8$TransactionValue,main="Germany:Transaction Values", xlab = "Transaction Value", col = rainbow(14))
+
+```
+
+***
+6.Which customer had the highest number of transactions? Which customer is most valuable (i.e.highest total sum of transactions)? 
+
+***
+First we will calculate the highest number of transactions by a customer and then most valuble (highest value) customer
+
+***
+
+```{r}
+
+Mydata %>% count(CustomerID) %>% filter(n == (max(n)))
+
+#since highest number is associated with NA , we will ignore the CustomerID NA and check again
+
+Mydata9 <- Mydata %>% count(CustomerID) %>% filter(CustomerID != "NA")
+
+filter(Mydata9,n == (max(n)))
+
+
+Mydata %>% group_by(CustomerID) %>% summarise(TV = sum(TransactionValue)) %>% filter(TV == max(TV))
+
+#since highest Transaction Value is associated with NA , we will ignore the CustomerID NA and check again
+
+Mydata10 <- Mydata %>% group_by(CustomerID) %>% summarise(TV = sum(TransactionValue)) %>% filter(TV != max(TV))
+
+filter(Mydata10,TV == (max(TV)))
+
+
+```
+
+***
+
+7.Calculate the percentage of missing values for each variable in the dataset (5 marks). Hint colMeans():
+
+***
+
+```{r}
+
+summary(Mydata)
+
+# A quick glance at the summary stats reveals that only CustomerID column has got missing values(NAs). Hence , percentage of missing values for all other variables is 0.
+
+Percent_CustID = mean(is.na(Mydata$CustomerID)) * 100
+round(Percent_CustID,2)
+
+```
+
+***
+
+8.What are the number of transactions with missing CustomerID records by countries? 
+
+***
+
+```{r}
+
+
+Mydata %>% group_by(Country) %>% count(CustomerID) %>% filter(is.na(CustomerID == "NA"))
+
+
+```
+
+***
+
+9.On average, how often the costumers comeback to the website for their next shopping? (i.e. what is the average number of days between consecutive shopping) (Optional/Golden question: 18 additional marks!) Hint: 1. A close approximation is also acceptable and you may find diff() function useful. 
+
+***
+Sorting CustomerID and New_Invoice_Date columns and then mutating a new column intr with the diffrence in innvoice dates, finally calculating the average
+
+***
+
+```{r}
+Mydata11 <- Mydata[order(Mydata$CustomerID, Mydata$New_Invoice_Date),]
+Mydata12 <- Mydata11 %>% group_by(CustomerID) %>% mutate(intr = (c(0,diff(New_Invoice_Date))))
+
+mean(Mydata12$intr)
+
+```
+
+***
+
+10.In the retail sector, it is very important to understand the return rate of the goods purchased by customers. In this example, we can define this quantity, simply, as the ratio of the number of transactions cancelled (regardless of the transaction value) over the total number of transactions.With this definition,what is the return rate for the French customers? (10 marks). Consider the cancelled transactions as those where the ‘Quantity’ variable has a negative value.
+
+***
+
+First we will calculate the total number of transaction from Frace and then count of cancelled transactions to calculate the Rate of Return
+
+***
+
+```{r}
+
+Mydata13 <- Mydata %>% group_by(Country , Quantity) %>% summarise(n=n()) %>% filter(Country == "France")
+
+Total_Transactions_Fr = sum(Mydata13$n)
+
+Mydata14 <- Mydata %>% group_by(Country , Quantity) %>% summarise(n=n()) %>% 
+            filter(Country == "France" & Quantity < 0)
+
+Total_Canl_Transactions_Fr = sum(Mydata14$n)
+
+RoR_Fr = paste0((round(100* Total_Canl_Transactions_Fr/Total_Transactions_Fr,2 ))," %")
+
+
+RoR_Fr
+
+```
+
+***
+
+11.What is the product that has generated the highest revenue for the retailer? (i.e. item with the highest total sum of ‘TransactionValue’).
+
+***
+
+DOT is the product that generated the highest revenue
+
+***
+
+```{r}
+
+
+Mydata %>% group_by(StockCode) %>% summarise(TV = sum(TransactionValue)) %>% filter(TV == max(TV))
+
+```
+
+***
+
+12.How many unique customers are represented in the dataset? You can use unique() and length() functions.
+
+***
+
+
+```{r}
+
+length(unique(Mydata$CustomerID))
+
+
+
+```
+
